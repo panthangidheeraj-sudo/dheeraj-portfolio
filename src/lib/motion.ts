@@ -8,9 +8,9 @@ import { primeWrite, writeOn } from '../components/Cursive';
 gsap.registerPlugin(ScrollTrigger, SplitText, MotionPathPlugin);
 
 export { gsap, ScrollTrigger, SplitText };
+import { prefersReducedMotion } from './motionPref';
 
-export const prefersReducedMotion = () =>
-  typeof window !== 'undefined' && !!window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+export { prefersReducedMotion };
 export const isPhone = () => typeof window !== 'undefined' && window.matchMedia('(max-width: 700px)').matches;
 
 export function useMedia(query: string) {

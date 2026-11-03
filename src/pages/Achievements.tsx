@@ -95,7 +95,7 @@ export default function Achievements() {
     cv.setAttribute('aria-hidden', 'true');
     el.prepend(cv);
     engine.current = mount(el, cv, {
-      exhibits: list, quality: low ? 'low' : 'high', reducedMotion: mq('(prefers-reduced-motion: reduce)'),
+      exhibits: list, quality: low ? 'low' : 'high', reducedMotion: prefersReducedMotion(),
       callbacks: {
         onProgress: (p: number) => { if (p - lastP >= 0.05 || p === 1) { lastP = p; setProgress(p); } },
         onIntroDone: () => setIntroDone(true),

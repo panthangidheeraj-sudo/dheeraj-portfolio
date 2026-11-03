@@ -4,6 +4,7 @@
 // callbacks instead of React state, and a centred-snap before focus while drifting.
 import { Renderer, Program, Mesh, Triangle, Plane, Texture, RenderTarget } from 'ogl';
 import { releaseGL } from '../../lib/releaseGL.js';
+import { prefersReducedMotion } from '../../lib/motionPref';
 
 const BEND_PRESETS = {
   liquid: { lensWidth: 0.74, lensHeight: 1.18, tilt: 62, roundness: 1, bend: 0.34, reach: 0.38, curl: 'twist', dispersion: 0.45, liquid: 0, followCursor: false },
@@ -281,7 +282,7 @@ export function mount(container, canvasEl, options = {}, callbacks = {}) {
     return null;
   }
 
-  const reducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const reducedMotion = prefersReducedMotion();
   const anisotropy = renderer.getExtension('EXT_texture_filter_anisotropic') ? 8 : 0;
 
   let slots = [];

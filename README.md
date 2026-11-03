@@ -160,3 +160,12 @@ Planned:
 - An edge function for the forms (validation, rate limit, email notification).
 
 Only the public **anon** key goes in the frontend. The service-role key stays on the server.
+
+## Motion setting (why animations can look "simplified")
+
+The site follows the visitor's operating-system "reduce motion" setting. On Windows that is
+**Settings → Accessibility → Visual effects → Animation effects** — if it is OFF, the site shows plain fades only.
+
+To override it without touching Windows: use the **Animations** switch in the footer, or open any page with
+`?motion=full` (or `?motion=reduced`, `?motion=auto` to go back to the system setting). The choice is remembered per browser.
+All of this lives in `src/lib/motionPref.ts`.

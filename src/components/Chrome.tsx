@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { channelHref, useContent } from '../lib/store';
 import { gsap, prefersReducedMotion } from '../lib/motion';
+import { currentMotionMode, osReducesMotion, setMotionMode } from '../lib/motionPref';
 import { lockScroll, scrollToTarget } from '../lib/smooth';
 import { CursiveWord } from './Cursive';
 
@@ -135,9 +136,23 @@ export function Footer() {
         </div>
         <div className="foot-bar">
           <span>© {new Date().getFullYear()} Dheeraj Panthangi</span>
+          <MotionSwitch />
           <Link className="admin" to="/admin">Administrator access</Link>
         </div>
       </div>
     </footer>
+  );
+}
+
+/** Footer switch: animations follow the system setting by default; this lets a visitor turn the full motion on or off. */
+function MotionSwitch() {
+  const reduced = prefersReducedMotion();
+  const fromSystem = currentMotionMode() === 'auto' && osReducesMotion();
+  return (
+    <button type="button" className="motion-switch" aria-pressed={!reduced}
+      title={fromSystem ? 'Your device asks for reduced motion, so animations are simplified. Click to play the full animations.' : 'Switch the site animations on or off'}
+      onClick={() => setMotionMode(reduced ? 'full' : 'reduced')}>
+      <i aria-hidden="true" />Animations: {reduced ? 'simplified' : 'full'}{reduced ? ' — play full' : ''}
+    </button>
   );
 }

@@ -1,4 +1,5 @@
 import { releaseGL } from '../../lib/releaseGL.js';
+import { prefersReducedMotion } from '../../lib/motionPref';
 // React Bits <Cubes /> (JS-CSS) — the original WebGL2 effect, unchanged, wrapped in a framework-free mount().
 // CREDIT: Component inspired from Can Tastemel's original work for the lambda.ai landing page — https://cantastemel.com
 // [DP] additions: `rippleTarget` (element that receives clicks, so ripples work through content layered on top) and destroy().
@@ -219,7 +220,7 @@ void main() {
       return rgb;
     };
 
-    const reduce = (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) || false;
+    const reduce = prefersReducedMotion();
     const view = { width: 1, height: 1, ratio: 1, scale: 1 };
     const pointer = { x: 0, y: 0, inside: false, moved: 0 };
     const cursor = { x: 0, y: 0, vx: 0, vy: 0, weight: 0, primed: false };

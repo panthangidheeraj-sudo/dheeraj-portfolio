@@ -3,6 +3,7 @@
 // [DP] change: drag is mouse/pen only, so touch users keep normal page scrolling (the spiral still turns with scroll).
 import { useEffect, useMemo, useRef } from 'react';
 import './InfiniteSpiral.css';
+import { prefersReducedMotion } from '../../lib/motionPref';
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 const modulo = (value, divisor) => ((value % divisor) + divisor) % divisor;
@@ -56,7 +57,7 @@ const InfiniteSpiral = ({
     let frameId;
     let previousTime = performance.now();
     let bounds = root.getBoundingClientRect();
-    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const reducedMotion = { matches: prefersReducedMotion() };
     const scrollEnabled = animationMode === 'scroll' || animationMode === 'all';
     const scrollSpeedMultiplier = Math.max(speed, 0) / 0.55;
     let lastScrollY = window.scrollY;
