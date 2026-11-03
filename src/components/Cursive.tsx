@@ -55,9 +55,13 @@ export function writeOn(svg: SVGSVGElement | null, speed = 2900) {
   const tl = gsap.timeline();
   if (!svg) return tl;
   primeWrite(svg);
-  svg.querySelectorAll<SVGPathElement>('.cw-pen').forEach((p) => {
+  // Each pen is shown by the timeline itself (not an onStart callback) and the first one starts at exactly 0 —
+  // a negative start time made the opening stroke of every word (the swash of D, M, P) skip its reveal until the end.
+  svg.querySelectorAll<SVGPathElement>('.cw-pen').forEach((p, i) => {
     const L = Number(p.dataset.len);
-    tl.to(p, { strokeDashoffset: 0, duration: Math.max(0.06, L / speed), ease: L > 300 ? 'sine.inOut' : 'none', onStart: () => { p.style.visibility = ''; } }, '>-0.015');
+    const at = i === 0 ? 0 : '>-0.015';
+    tl.set(p, { visibility: 'visible' }, at)
+      .to(p, { strokeDashoffset: 0, duration: Math.max(0.06, L / speed), ease: L > 300 ? 'sine.inOut' : 'none' }, '<');
   });
   tl.add(() => finishWrite(svg));
   return tl;

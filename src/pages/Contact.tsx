@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import '../styles/contact.css';
+import { CafeBack, CafeFront, CafeFrontFx, CafeGlow, CafeRain } from '../components/scenes/CafeScene';
 import { Footer, Nav } from '../components/Chrome';
 import { channelDisplay, channelHref, pad2, useContent } from '../lib/store';
 import { gsap, prefersReducedMotion, ScrollTrigger, usePageMotion } from '../lib/motion';
@@ -82,32 +83,7 @@ export default function Contact() {
         gsap.fromTo(name, { letterSpacing: '0.55em' }, { letterSpacing: ls === 'normal' ? '0em' : ls, ease: 'none', scrollTrigger: { trigger: name, start: 'top bottom', end: 'bottom 65%', scrub: 0.6 } });
       }
     }, el);
-    // city windows: a few distant lights flicker in the skyline (desktop)
-    const cv = el.querySelector<HTMLCanvasElement>('.h-twinkle');
-    let tick: (() => void) | null = null;
-    if (cv && window.matchMedia('(min-width: 900px)').matches) {
-      const g = cv.getContext('2d');
-      const dpr = Math.min(window.devicePixelRatio || 1, 2);
-      const pts = Array.from({ length: 70 }, () => ({ x: 0.48 + Math.random() * 0.5, y: 0.12 + Math.random() * 0.48, r: 0.6 + Math.random() * 1.1, ph: Math.random() * 6.28, sp: 0.4 + Math.random() * 1.6, blink: Math.random() < 0.25 }));
-      let last = 0;
-      tick = () => {
-        const now = performance.now();
-        if (!g || now - last < 66) return; // ~15 fps is plenty for a flicker
-        last = now;
-        const w = cv.clientWidth, h = cv.clientHeight;
-        if (cv.width !== Math.round(w * dpr)) { cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); }
-        g.setTransform(dpr, 0, 0, dpr, 0, 0);
-        g.clearRect(0, 0, w, h);
-        const t = now / 1000;
-        pts.forEach((p) => {
-          const a = p.blink ? (Math.sin(t * p.sp * 2 + p.ph) > 0.6 ? 0.9 : 0.08) : 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(t * p.sp + p.ph));
-          g.fillStyle = `rgba(255,214,150,${a.toFixed(3)})`;
-          g.beginPath(); g.arc(p.x * w, p.y * h, p.r, 0, 6.283); g.fill();
-        });
-      };
-      gsap.ticker.add(tick);
-    }
-    return () => { ctx.revert(); if (tick) gsap.ticker.remove(tick); };
+    return () => { ctx.revert(); };
   }, []);
 
   const errs = touched ? validate(v) : {};
@@ -147,10 +123,10 @@ export default function Contact() {
     <div className="dp pg-contact" id="top" ref={root}>
       <Nav />
       <header className="hero" aria-label="Let’s connect">
-        <div className="layer h-bg" data-scrub="hero-bg"><canvas className="h-twinkle" aria-hidden="true" /><picture><source media="(max-width: 700px)" srcSet="/media/contact/contact-mob-bg.webp" /><img src="/media/contact/contact-hero-bg.webp" alt="" width={2400} height={1350} /></picture></div>
+        <div className="layer h-bg" data-scrub="hero-bg"><CafeBack /><CafeGlow /><CafeRain /></div>
         <h1 className="h-type" aria-label="Let’s connect." data-scrub="hero-type"><span aria-hidden="true">LET’S</span><span aria-hidden="true">CONNECT.</span></h1>
-        <div className="layer h-fg" data-scrub="hero-fg"><picture><source media="(max-width: 700px)" srcSet="/media/contact/contact-mob-fg.webp" /><img src="/media/contact/contact-hero-fg.webp" alt="A private office at night: a walnut desk under a brass lamp and a leather chair, in front of floor-to-ceiling windows onto a lit city skyline" width={2400} height={1350} /></picture></div>
-        <div className="h-lamp" aria-hidden="true" /><div className="h-shade" />
+        <div className="layer h-fg" data-scrub="hero-fg"><CafeFront /><CafeFrontFx /></div>
+        <div className="h-shade" />
         <p className="h-sub">Every meaningful project begins with a conversation.</p>
         <a className="h-cue" href="#welcome" aria-label="Scroll to the contact section"><span>Take a seat</span><span className="rail" /></a>
       </header>

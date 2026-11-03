@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import gsap from 'gsap';
 import '../styles/work.css';
 import { Arrow, Footer, Nav } from '../components/Chrome';
+import WorkshopScene from '../components/scenes/WorkshopScene';
 import InfiniteSpiral from '../components/reactbits/InfiniteSpiral';
 import { pad2, useContent } from '../lib/store';
 import { entranceWait, prefersReducedMotion, ScrollTrigger, usePageMotion } from '../lib/motion';
@@ -147,6 +148,8 @@ export default function Work() {
       <Nav />
       <main>
         <header className="intro">
+          <div className="work-glow" aria-hidden="true" />
+          <div className="work-scene"><WorkshopScene /></div>
           <div className="wrap-wide">
             <div className="intro-top"><p className="label" data-m="scramble"><b>02</b> My Work</p><span className="showing">Index · <b data-m="counter" data-delay="0.6">{pad2(all.length)}</b> projects</span></div>
             <h1 className="big" aria-label="My Work">

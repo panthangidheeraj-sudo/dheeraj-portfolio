@@ -23,15 +23,15 @@ export function mount(container, canvas, opts = {}) {
     return null;
   }
   if (!renderer.getContext()) return null;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1.25 : 1.75));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, low ? 1.25 : 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = low ? 1.12 : 1.24;
   renderer.setClearColor(0x000000, 1);
 
   const scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
-  scene.fog = new THREE.FogExp2(0x000000, low ? 0.035 : 0.022);
+  scene.fog = new THREE.FogExp2(0x000000, low ? 0.035 : 0.018);
   const camera = new THREE.PerspectiveCamera(50, 1, 0.05, 140);
   const disposables = [];
   const keep = (x) => (disposables.push(x), x);
@@ -45,21 +45,23 @@ export function mount(container, canvas, opts = {}) {
   const readyTimer = setTimeout(() => { if (!readyFired) { readyFired = true; cb.onProgress(1); cb.onReady(); } }, 8000);
   const loader = new THREE.TextureLoader(manager);
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
-  const tex = (url) => {
-    const t = loader.load(url);
+  const tex = (url, onLoad) => {
+    const t = loader.load(url, onLoad);
     t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = Math.min(8, maxAniso);
+    t.anisotropy = Math.min(16, maxAniso);
     return keep(t);
   };
+  const TEXT_SS = low ? 1 : 2; // text/plaque canvases are drawn at 2x so engraving and lettering stay crisp up close
   const canvasTex = (w, h, draw) => {
     const c = document.createElement('canvas');
-    c.width = w; c.height = h;
+    c.width = w * TEXT_SS; c.height = h * TEXT_SS;
     const g = c.getContext('2d');
+    g.scale(TEXT_SS, TEXT_SS);
     draw(g, w, h);
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = Math.min(8, maxAniso);
-    t.userData.redraw = () => { g.clearRect(0, 0, w, h); draw(g, w, h); t.needsUpdate = true; };
+    t.anisotropy = Math.min(16, maxAniso);
+    t.userData.redraw = () => { g.setTransform(TEXT_SS, 0, 0, TEXT_SS, 0, 0); g.clearRect(0, 0, w, h); draw(g, w, h); t.needsUpdate = true; };
     return keep(t);
   };
 
@@ -96,7 +98,8 @@ export function mount(container, canvas, opts = {}) {
     brass: keep(new THREE.MeshStandardMaterial({ color: 0xc8b38a, roughness: 0.3, metalness: 1 })),
     steel: keep(new THREE.MeshStandardMaterial({ color: 0xb7b4ae, roughness: 0.36, metalness: 1 })),
     fixture: keep(new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5, metalness: 0.6 })),
-    cove: keep(new THREE.MeshBasicMaterial({ color: 0x3b3224 })),
+    cove: keep(new THREE.MeshBasicMaterial({ color: 0x7a6a48 })),
+    led: keep(new THREE.MeshBasicMaterial({ color: 0xfff0d8, toneMapped: false })),
     hit: keep(new THREE.MeshBasicMaterial({ visible: false }))
   };
   const glassMats = [];
@@ -142,7 +145,9 @@ export function mount(container, canvas, opts = {}) {
   const ceil = new THREE.Mesh(geo(new THREE.PlaneGeometry(HALL_W, zLen)), M.ceil);
   ceil.rotation.x = Math.PI / 2; ceil.position.set(0, HALL_H, zMid); arch.add(ceil);
   for (let z = Z_ENTRY - 3; z > Z_END; z -= 3) { const b = box(HALL_W, 0.42, 0.22, M.beam); b.position.set(0, HALL_H - 0.21, z); arch.add(b); }
-  [-3, 3].forEach((x) => { const t = box(0.12, 0.06, zLen, M.fixture); t.position.set(x, HALL_H - 0.45, zMid); arch.add(t); });
+  [-3, 3].forEach((x) => { const t = box(0.12, 0.06, zLen, M.fixture); t.position.set(x, HALL_H - 0.45, zMid); arch.add(t); const l = box(0.05, 0.01, zLen - 0.4, M.led); l.position.set(x, HALL_H - 0.485, zMid); arch.add(l); });
+  // soft warm light-lines low on both walls (they also glow in the mirror floor)
+  [-1, 1].forEach((sd) => { const l = box(0.03, 0.03, zLen - 0.4, M.led); l.position.set(sd * (HALL_W / 2 - 0.03), 0.22, zMid); arch.add(l); });
   // side walls with shadow-gap at the floor and a faint warm cove line
   [-1, 1].forEach((s) => {
     const w = box(0.4, HALL_H, zLen + 0.4, M.wall); w.position.set(s * (HALL_W / 2 + 0.2), HALL_H / 2, zMid); arch.add(w);
@@ -204,7 +209,31 @@ export function mount(container, canvas, opts = {}) {
   addSpot(new THREE.Vector3(0, 6.6, Z_PART + 2.2), new THREE.Vector3(0, 0, Z_PART + 0.8), { intensity: 150, angle: 0.42, group: 'hall1', cone: false });
   addSpot(new THREE.Vector3(0, 6.6, Z_PART - 2.2), new THREE.Vector3(0, 0, Z_PART - 0.8), { intensity: 150, angle: 0.42, group: 'hall2', cone: false });
   // architectural wall-grazers: reveal the black walls without lighting the room flat (skipped on low-power devices)
-  if (!low) [-1, 1].forEach((sd) => [-4, -15, -29, -40].forEach((z) => addSpot(new THREE.Vector3(sd * 7.4, 6.75, z), new THREE.Vector3(sd * 9, 0.6, z), { intensity: 70, angle: 0.62, penumbra: 1, group: z > Z_PART ? 'hall1' : 'hall2', cone: false })));
+  if (!low) [-1, 1].forEach((sd) => [-4, -15, -29, -40].forEach((z) => addSpot(new THREE.Vector3(sd * 7.4, 6.75, z), new THREE.Vector3(sd * 9, 0.6, z), { intensity: 110, angle: 0.62, penumbra: 1, group: z > Z_PART ? 'hall1' : 'hall2', cone: false })));
+
+  // ---------- floating dust: tiny motes that catch the light and drift slowly through the halls ----------
+  let dust = null;
+  if (!low) {
+    const N = 420, pos = new Float32Array(N * 3), seed = new Float32Array(N);
+    for (let i = 0; i < N; i++) {
+      pos[i * 3] = (Math.random() - 0.5) * 13;
+      pos[i * 3 + 1] = 0.4 + Math.random() * 5.6;
+      pos[i * 3 + 2] = Z_END + 2 + Math.random() * (6 - Z_END - 2);
+      seed[i] = Math.random() * 100;
+    }
+    const dg = geo(new THREE.BufferGeometry());
+    dg.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    dg.setAttribute('aSeed', new THREE.BufferAttribute(seed, 1));
+    const dm = keep(new THREE.ShaderMaterial({
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      uniforms: { uTime: { value: 0 }, uAmt: { value: 0 }, uPx: { value: 1 } },
+      vertexShader: 'uniform float uTime; uniform float uPx; attribute float aSeed; varying float vA; void main(){ vec3 p=position; p.x+=sin(uTime*0.07+aSeed)*0.6; p.y+=sin(uTime*0.05+aSeed*1.7)*0.4; p.z+=cos(uTime*0.06+aSeed*0.6)*0.6; vec4 mv=modelViewMatrix*vec4(p,1.0); gl_PointSize=clamp(46.0/(-mv.z),1.0,4.5)*uPx; vA=0.25+0.4*fract(aSeed*3.1); gl_Position=projectionMatrix*mv; }',
+      fragmentShader: 'uniform float uAmt; varying float vA; void main(){ float d=length(gl_PointCoord-0.5); float a=smoothstep(0.5,0.0,d)*vA*uAmt; gl_FragColor=vec4(vec3(1.0,0.92,0.78)*a,a); }'
+    }));
+    dust = new THREE.Points(dg, dm);
+    dust.frustumCulled = false;
+    scene.add(dust);
+  }
 
   // ---------- engraved plaque ----------
   const plaqueTex = (title, sub) => canvasTex(640, 210, (g, w, h) => {
@@ -219,6 +248,46 @@ export function mount(container, canvas, opts = {}) {
     g.font = '500 20px "Instrument Sans", Arial, sans-serif';
     g.fillText(sub.toUpperCase(), 32, 150);
   });
+
+  // ---------- big sign hung above each exhibit: what it is, in large type ----------
+  const signTex = (kicker, headline) => canvasTex(1024, 300, (g, w, h) => {
+    g.clearRect(0, 0, w, h);
+    g.textAlign = 'center';
+    const ls = (v) => { if ('letterSpacing' in g) g.letterSpacing = v; };
+    ls('5px');
+    g.font = '500 27px "Instrument Sans", Arial, sans-serif';
+    g.fillStyle = '#d9c08a';
+    if (kicker) g.fillText(kicker.toUpperCase(), w / 2, 56);
+    let size = 138;
+    ls('3px');
+    g.font = `600 ${size}px "Instrument Sans", Arial, sans-serif`;
+    while (g.measureText(headline).width > w - 64 && size > 52) { size -= 4; g.font = `600 ${size}px "Instrument Sans", Arial, sans-serif`; }
+    const base = 56 + 36 + size * 0.78;
+    g.shadowColor = 'rgba(255,204,128,0.85)'; g.shadowBlur = 34; g.fillStyle = '#fff4e0';
+    g.fillText(headline, w / 2, base);
+    g.shadowBlur = 14; g.fillText(headline, w / 2, base);
+    g.shadowBlur = 0;
+    g.fillStyle = '#c8b38a'; g.fillRect(w / 2 - 90, base + 26, 180, 2);
+    ls('0px');
+  });
+  // a certificate standing inside glass: scales to its own aspect ratio once loaded, anchored at its bottom edge
+  const certInGlass = (url, maxW, maxH, glow = 0.32) => {
+    const holder = new THREE.Group();
+    const mat = keep(new THREE.MeshStandardMaterial({ color: 0xc4c4c4, roughness: 0.75, metalness: 0, emissive: 0xffffff, emissiveIntensity: glow }));
+    const mesh = new THREE.Mesh(geo(new THREE.PlaneGeometry(1, 1)), mat);
+    const fit = (img) => {
+      const a = img && img.width ? img.width / img.height : 1.4;
+      let w = maxW, h = w / a;
+      if (h > maxH) { h = maxH; w = h * a; }
+      mesh.scale.set(w, h, 1); mesh.position.y = h / 2;
+      holder.userData.size = { w, h };
+    };
+    const map = tex(url, (t) => fit(t.image));
+    mat.map = map; mat.emissiveMap = map;
+    fit(null);
+    holder.add(mesh);
+    return holder;
+  };
 
   // ---------- exhibit objects ----------
   const makeObject = (kind, s) => {
@@ -270,7 +339,7 @@ export function mount(container, canvas, opts = {}) {
       glassParts.push({ mesh: gl, edge: e, y, lift: 0 });
       glassEdges.push(edgeMat);
     };
-    let focusLocal, viewLocal, spotLocal, hitBox, angle = 0.3, inten = 95;
+    let focusLocal, viewLocal, spotLocal, hitBox, angle = 0.3, inten = 95, dyn = null;
     if (ex.type === 'vitrine') {
       const ped = box(0.8 * s, 1.0, 0.8 * s, M.stone); ped.position.y = 0.5; g.add(ped);
       const cap = box(0.82 * s, 0.025, 0.82 * s, M.lacquer); cap.position.y = 1.0125; g.add(cap);
@@ -292,6 +361,24 @@ export function mount(container, canvas, opts = {}) {
       focusLocal = new THREE.Vector3(0, 1.55, 0); viewLocal = new THREE.Vector3(0, 1.7, 2.5 + s * 0.3);
       spotLocal = new THREE.Vector3(0, 6.7, 0.9); angle = 0.17 * s; inten = 560;
       hitBox = [0.8 * s, 2.0, 0.8 * s, 1.0];
+    } else if (ex.type === 'showcase') {
+      // the certificate itself, standing on a small brass ledge inside a tall glass case, lit from within
+      const W = 1.32 * s, D = 0.7 * s, gh = 1.0 * s;
+      const ped = box(W, 1.0, D, M.stone); ped.position.y = 0.5; g.add(ped);
+      const cap = box(W + 0.02, 0.025, D + 0.02, M.lacquer); cap.position.y = 1.0125; g.add(cap);
+      addGlass(W - 0.02, gh, D - 0.02, 1.025 + gh / 2);
+      const bed = new THREE.Mesh(geo(new THREE.PlaneGeometry(W - 0.12, D - 0.12)), keep(new THREE.MeshBasicMaterial({ color: 0x4a402e }))); bed.rotation.x = -Math.PI / 2; bed.position.y = 1.027; g.add(bed);
+      const ledge = box(W * 0.78, 0.02, 0.1, M.brass); ledge.position.set(0, 1.04, 0.1 * s); g.add(ledge);
+      const holder = certInGlass(ex.cert, (W - 0.22), gh - 0.16, 0.05 * clamp(ex.light || 1, 0.6, 1.4));
+      holder.position.set(0, 1.05, 0.08 * s); holder.rotation.x = -0.16; g.add(holder);
+      const halo = new THREE.Mesh(geo(new THREE.PlaneGeometry(W * 1.25, gh * 1.15)), haloMat); halo.position.set(0, 1.025 + gh * 0.52, -D / 2 + 0.06); g.add(halo);
+      const strip = box(W - 0.14, 0.012, 0.012, M.led); strip.position.set(0, 1.025 + gh - 0.02, D / 2 - 0.07); g.add(strip);
+      const strip2 = box(W - 0.14, 0.012, 0.012, M.led); strip2.position.set(0, 1.025 + gh - 0.02, -D / 2 + 0.07); g.add(strip2);
+      const pl = new THREE.Mesh(geo(new THREE.PlaneGeometry(0.44, 0.145)), plaqueMat); pl.position.set(0, 0.62, D / 2 + 0.002); g.add(pl);
+      focusLocal = new THREE.Vector3(0, 1.05 + gh * 0.5, 0); viewLocal = new THREE.Vector3(0, 1.62, 2.0 + s * 0.2);
+      dyn = { w: W + 0.3, y: 1.62, base: 2.0 + s * 0.2 };
+      spotLocal = new THREE.Vector3(0, 6.6, 1.5); angle = 0.26 * s; inten = 80;
+      hitBox = [W + 0.12, 2.1, D + 0.12, 1.05];
     } else if (ex.type === 'wall') {
       const cw = 1.4 * s, ch = cw / 1.415;
       const back = box(cw + 0.36, ch + 0.36, 0.03, M.velvet); back.position.set(0, 1.75, 0.015); g.add(back);
@@ -341,6 +428,17 @@ export function mount(container, canvas, opts = {}) {
     if (ex.type !== 'wall') {
       const sh = new THREE.Mesh(geo(new THREE.PlaneGeometry(1.8 * s, 1.8 * s)), shadowMat);
       sh.rotation.x = -Math.PI / 2; sh.position.y = 0.006; g.add(sh);
+      const pool = new THREE.Mesh(geo(new THREE.PlaneGeometry(4.2 * s, 4.2 * s)), poolMat);
+      pool.rotation.x = -Math.PI / 2; pool.position.y = 0.012; g.add(pool);
+    }
+    // the sign: kicker + headline in large type, hung from the ceiling (flush on the wall for wall pieces)
+    const signMat = keep(new THREE.MeshBasicMaterial({ map: signTex(ex.kicker || '', ex.headline || ex.title), transparent: true, opacity: 0, depthWrite: false, toneMapped: false, fog: false }));
+    const signW = (ex.type === 'wall' ? 2.9 : 3.2) * clamp(s, 0.9, 1.25), signH = signW * 300 / 1024;
+    const signY = ex.type === 'wall' ? 3.15 : 3.35;
+    const sign = new THREE.Mesh(geo(new THREE.PlaneGeometry(signW, signH)), signMat);
+    sign.position.set(0, signY, ex.type === 'wall' ? 0.03 : 0); sign.renderOrder = 5; g.add(sign);
+    if (ex.type !== 'wall') {
+      [-1, 1].forEach((sd) => { const len = HALL_H - (signY + signH / 2); const cb = new THREE.Mesh(geo(new THREE.CylinderGeometry(0.004, 0.004, len, 6)), M.fixture); cb.position.set(sd * (signW / 2 - 0.12), signY + signH / 2 + len / 2, 0); g.add(cb); });
     }
     const hb = box(hitBox[0], hitBox[1], hitBox[2], M.hit); hb.position.y = hitBox[3]; hb.userData.id = ex.id; g.add(hb); hits.push(hb);
     g.updateMatrixWorld(true);
@@ -349,8 +447,8 @@ export function mount(container, canvas, opts = {}) {
     view.y = viewLocal.y;
     const spotPos = g.localToWorld(spotLocal.clone());
     const zone = ex.z > Z_PART ? 'hall1' : 'hall2';
-    const spot = addSpot(spotPos, focus, { intensity: inten * clamp(ex.light || 1, 0.5, 1.5), angle, group: zone, id: ex.id });
-    exhibits.set(ex.id, { data: ex, group: g, focus, view, spot, edgeMats: glassEdges, glass: glassParts, z: ex.z });
+    const spot = addSpot(spotPos, focus, { intensity: inten * 1.25 * clamp(ex.light || 1, 0.5, 1.5), angle, group: zone, id: ex.id });
+    exhibits.set(ex.id, { data: ex, group: g, focus, view, viewLocal, dyn, spot, signMat, edgeMats: glassEdges, glass: glassParts, z: ex.z });
   });
 
   // ---------- closing wall ----------
@@ -436,6 +534,11 @@ export function mount(container, canvas, opts = {}) {
     focusId = id; hoverId = null; closingT = 0;
     rig.offYaw = 0; rig.offPitch = 0;
     setTargets();
+    if (e.dyn) { // fit the whole certificate in frame whatever the screen shape (phones are narrow)
+      const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * camera.aspect);
+      const d = Math.max(e.dyn.base, (e.dyn.w * 1.08) / (2 * Math.tan(hf / 2)));
+      e.view = e.group.localToWorld(new THREE.Vector3(0, e.dyn.y, d)); e.view.y = e.dyn.y;
+    }
     tweenTo(e.view, e.focus, 2.0);
     cb.onHover(null);
     cb.onFocus(id);
@@ -543,6 +646,7 @@ export function mount(container, canvas, opts = {}) {
       else perf.n = -150; // healthy: look again after a few seconds, in case the walk-through gets heavier
     }
   };
+  const inset = { cur: 0, target: 0 };
   const resize = () => {
     const w = Math.max(1, container.clientWidth), h = Math.max(1, container.clientHeight);
     renderer.setSize(w, h, false);
@@ -578,7 +682,8 @@ export function mount(container, canvas, opts = {}) {
       r.light.intensity = r.base * r.factor;
       if (r.cone) r.cone.material.uniforms.uOpacity.value = r.coneBase * Math.min(r.factor, 1.4) * (focusId && r.id !== focusId ? 0.4 : 1);
     });
-    hemi.intensity = damp(hemi.intensity, phase === 'dark' ? 0 : focusId ? 0.22 : 0.6, 2, dt);
+    hemi.intensity = damp(hemi.intensity, phase === 'dark' ? 0 : focusId ? 0.32 : 0.85, 2, dt);
+    exhibits.forEach((e) => { if (e.signMat && e.spot) e.signMat.opacity = damp(e.signMat.opacity, clamp(e.spot.factor * 1.25, 0, 1), 6, dt); });
     if (focusId === 'closing') { const before = closingT; closingT += dt; if ((before < 0.5 && closingT >= 0.5) || (before < 1.1 && closingT >= 1.1)) setTargets(); }
     closingMat.emissiveIntensity = damp(closingMat.emissiveIntensity, focusId === 'closing' && closingT > 1.3 ? 0.42 : 0.12, 1.4, dt);
     if (!reduced) {
@@ -629,6 +734,15 @@ export function mount(container, canvas, opts = {}) {
     const pAim = mode === 'cinematic' && !pointer.down && !reduced ? 1 : 0;
     rig.parYaw = damp(rig.parYaw, -pointer.nx * 0.045 * pAim, 2.2, dt);
     rig.parPitch = damp(rig.parPitch, pointer.ny * 0.03 * pAim, 2.2, dt);
+    if (dust) {
+      const u = dust.material.uniforms;
+      u.uTime.value = t; u.uPx.value = renderer.getPixelRatio();
+      u.uAmt.value = damp(u.uAmt.value, phase === 'dark' ? 0 : focusId ? 0.55 : 1, 1.6, dt);
+    }
+    // phones: slide the picture up while the details sheet is open, so the exhibit sits above it
+    inset.cur = damp(inset.cur, inset.target, 5, dt);
+    if (inset.cur > 0.5) camera.setViewOffset(container.clientWidth, container.clientHeight, 0, inset.cur / 2, container.clientWidth, container.clientHeight);
+    else if (camera.view) { camera.clearViewOffset(); inset.cur = 0; }
     applyCamera();
     renderer.render(scene, camera);
   };
@@ -636,7 +750,7 @@ export function mount(container, canvas, opts = {}) {
 
   // fonts must be ready before plaques/closing wall are painted; repaint once they arrive
   if (document.fonts && document.fonts.load) {
-    Promise.all(['400 46px "Cormorant Garamond"', '300 118px "Cormorant Garamond"', '500 20px "Instrument Sans"', '400 150px "Mrs Saint Delafield"'].map((f) => document.fonts.load(f).catch(() => {})))
+    Promise.all(['400 46px "Cormorant Garamond"', '300 118px "Cormorant Garamond"', '500 20px "Instrument Sans"', '600 120px "Instrument Sans"', '500 27px "Instrument Sans"', '400 150px "Mrs Saint Delafield"'].map((f) => document.fonts.load(f).catch(() => {})))
       .then(() => { if (!alive) return; disposables.forEach((d) => { if (d && d.isCanvasTexture && d.userData.redraw) d.userData.redraw(); }); });
   }
 
@@ -647,6 +761,7 @@ export function mount(container, canvas, opts = {}) {
       phase = 'entering'; setTargets();
       tweenTo(HOME.pos, HOME.look, 4.2, () => { phase = 'inside'; setTargets(); cb.onEntered(); });
     },
+    setInset(px) { inset.target = Math.max(0, Math.min(px || 0, container.clientHeight * 0.55)); },
     focus: (id) => doFocus(id),
     close: () => doClose(),
     next() { const i = focusId ? order.indexOf(focusId) : -1; doFocus(order[(i + 1) % order.length]); },
@@ -682,6 +797,24 @@ const shadowMat = (() => {
   gr.addColorStop(0, 'rgba(0,0,0,0.75)'); gr.addColorStop(1, 'rgba(0,0,0,0)');
   g.fillStyle = gr; g.fillRect(0, 0, 128, 128);
   return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false });
+})();
+
+// warm pool of light on the floor under each stand, and the glow behind a certificate in its case
+const poolMat = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 6, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(255,226,170,0.55)'); gr.addColorStop(0.45, 'rgba(255,214,150,0.16)'); gr.addColorStop(1, 'rgba(255,214,150,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+})();
+const haloMat = (() => {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 192;
+  const g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 96, 10, 128, 96, 130);
+  gr.addColorStop(0, 'rgba(255,236,200,0.65)'); gr.addColorStop(1, 'rgba(255,236,200,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 192);
+  return new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
 })();
 
 export function webglAvailable() {

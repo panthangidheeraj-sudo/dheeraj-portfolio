@@ -244,7 +244,7 @@ export default function Home() {
         <div className="fc-stage" data-cursor="Drag">
           {showCarousel && items.length > 0 && (
             <FlexCarousel items={items} preset="liquid" intro="rise" cardHeight={0.5} gap={12} squeeze={0.2} focusOnClick captions
-              captureWheel={false} drift={48} hoverDrift={0.3} driftResume={2.2} onChange={(i: number) => setActive(i)} ariaLabel="Selected projects" />
+              captureWheel={false} drift={64} hoverDrift={0.3} driftResume={2.2} onChange={(i: number) => setActive(i)} ariaLabel="Selected projects" />
           )}
         </div>
         {cur && (

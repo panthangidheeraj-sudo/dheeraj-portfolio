@@ -76,10 +76,11 @@ Both forms include a hidden honeypot field to filter bots and block duplicate su
 
 ## 4. The admin dashboard
 
+- The "Administrator access" link was taken out of the footer for now (a proper admin door comes later). Under `npm run dev` you can still open `http://localhost:5173/admin` directly.
 - `/admin` runs **only under `npm run dev` on your own computer**. On the live site, `/admin` just shows "available once the secure backend is connected". There is nothing to log into and nothing to attack.
 - Editors:
   - **Projects:** order, publish, featured, card, case study, media.
-  - **Achievements:** details, media, stand type, and a drag-to-place floor plan.
+  - **Achievements:** details, media, stand type, and a drag-to-place floor plan. Achievements live in `src/content/achievements.ts`; real certificates are in `public/media/achievements/`. Each one can carry a `headline` (the big sign above its podium) and a `kicker` (the small line above it).
   - **What I Offer:** services, packages and pricing.
   - **Contact page:** channels, intro and closing text.
 - **Save** stores changes in that browser, and the site at localhost shows them immediately.

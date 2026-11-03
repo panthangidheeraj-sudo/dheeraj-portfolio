@@ -10,7 +10,7 @@ import { mount, webglAvailable } from '../museum/engine';
 import { detectSoftwareGL } from '../lib/releaseGL.js';
 import { gsap, prefersReducedMotion, SplitText, usePageMotion } from '../lib/motion';
 
-type Engine = { enter(): void; focus(id: string): void; close(): void; next(): void; prev(): void; toEntrance(): void; setMode(m: string): void; destroy(): void } | null;
+type Engine = { setInset?(px: number): void; enter(): void; focus(id: string): void; close(): void; next(): void; prev(): void; toEntrance(): void; setMode(m: string): void; destroy(): void } | null;
 const catName = (k: string) => achievementCategories.find((c) => c[0] === k)?.[1] || k;
 const typeName = (k: string) => standTypes.find((t) => t[0] === k)?.[1] || k;
 
@@ -35,6 +35,8 @@ export default function Achievements() {
   const [dirCat, setDirCat] = useState('all');
   const [query, setQuery] = useState('');
   const [lightbox, setLightbox] = useState('');
+  const [sheetOpen, setSheetOpen] = useState(false); // phones: the details sheet starts compact so the next podium stays in view
+  const panelRef = useRef<HTMLElement>(null);
   const root = useRef<HTMLDivElement>(null);
   usePageMotion(root, [mode2d]);
   const calm = prefersReducedMotion();
@@ -123,14 +125,23 @@ export default function Achievements() {
   const q = query.trim().toLowerCase();
   const dirList = list.filter((e) => (dirCat === 'all' || e.category === dirCat) && (!q || `${e.title} ${e.org} ${catName(e.category)}`.toLowerCase().includes(q)));
   const narrow = typeof window !== 'undefined' && window.innerWidth < 900;
+  useEffect(() => { if (!focusId) setSheetOpen(false); }, [focusId]);
+  // phones: shift the 3D view up by the height of the details sheet, so the exhibit (and its neighbours) stay visible above it
+  useEffect(() => {
+    const eng = engine.current;
+    if (!eng || mode2d) return;
+    if (window.innerWidth >= 900 || !focusId || focusId === 'closing') { eng.setInset?.(0); return; }
+    const id = requestAnimationFrame(() => eng.setInset?.((panelRef.current?.getBoundingClientRect().height || 0) + 12));
+    return () => cancelAnimationFrame(id);
+  }, [focusId, sheetOpen, mode2d, entered]);
   const closeExhibit = () => (mode2d || !engine.current ? setFocusId(null) : engine.current.close());
 
   const Panel = ({ ex }: { ex: Achievement }) => (
-    <aside className="panel" aria-labelledby="ex-title">
+    <aside className={'panel' + (sheetOpen ? ' open' : '')} ref={panelRef} aria-labelledby="ex-title">
       <div className="panel-scroll">
         <div className="meta"><span>{catName(ex.category)}</span><span>{typeName(ex.type)}</span>{ex.featured && <span>Featured</span>}</div>
         <h2 id="ex-title">{ex.title}</h2>
-        <dl><dt>Awarded by</dt><dd className={isPlaceholder(ex.org) ? 'ph' : ''}>{ex.org}</dd><dt>Date</dt><dd className={isPlaceholder(ex.date) ? 'ph' : ''}>{ex.date}</dd></dl>
+        <dl><dt>Awarded by</dt><dd className={isPlaceholder(ex.org) ? 'ph' : ''}>{ex.org}</dd>{ex.date && <><dt>Date</dt><dd className={isPlaceholder(ex.date) ? 'ph' : ''}>{ex.date}</dd></>}</dl>
         <p className="desc">{ex.description}</p>
         <button className="cert-btn" type="button" onClick={() => setLightbox(ex.cert)} aria-label="Enlarge certificate"><img src={ex.cert} alt={`Certificate for ${ex.title}`} /><span>Enlarge</span></button>
         {ex.photos.length > 0 && <div className="photos">{ex.photos.map((p) => <button key={p} type="button" onClick={() => setLightbox(p)} aria-label="Enlarge photograph"><img src={p} alt="Supporting photograph" /></button>)}</div>}
@@ -144,7 +155,8 @@ export default function Achievements() {
           <button className="round" type="button" onClick={() => engine.current?.prev()} aria-label="Previous exhibit"><svg width="16" height="10" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M16 5H2M6 1L2 5l4 4" stroke="currentColor" strokeWidth="1.2" /></svg></button>
           <button className="round" type="button" onClick={() => engine.current?.next()} aria-label="Next exhibit"><svg width="16" height="10" viewBox="0 0 16 10" fill="none" aria-hidden="true"><path d="M0 5h14M10 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" /></svg></button>
         </div> : <span />}
-        <button className="close" type="button" onClick={closeExhibit}>Close exhibit ✕</button>
+        <button className="close more" type="button" onClick={() => setSheetOpen((v) => !v)} aria-expanded={sheetOpen}>{sheetOpen ? 'Less ▾' : 'Details ▴'}</button>
+        <button className="close" type="button" onClick={closeExhibit}>Close ✕</button>
       </div>
     </aside>
   );
@@ -153,18 +165,18 @@ export default function Achievements() {
     <div className="dp pg-museum" id="top" ref={root}>
       <Nav />
       {!mode2d && (
-        <section className="museum" aria-label="The Museum — interactive 3D exhibition">
-          <div className="stage" ref={stageRef} data-lenis-prevent data-cursor={hoverEx && !focusId ? 'View exhibit' : entered && !focusId ? 'Drag to look' : undefined} tabIndex={0} aria-label="3D museum. Use the arrow keys to move between exhibits and Escape to close an exhibit.">
+        <section className={'museum' + (focusId && focusId !== 'closing' ? ' has-focus' : '')} aria-label="My Achievements — interactive 3D showcase">
+          <div className="stage" ref={stageRef} data-lenis-prevent data-cursor={hoverEx && !focusId ? 'View exhibit' : entered && !focusId ? 'Drag to look' : undefined} tabIndex={0} aria-label="3D showcase of my achievements. Use the arrow keys to move between exhibits and Escape to close an exhibit.">
           </div>
           <div className="vig" />
           {!entered && (
             <div className={'intro' + (entering ? ' out' : '')}>
               <p className="kicker">03 · Achievements</p>
-              <h1 className="title">THE MUSEUM</h1>
+              <h1 className="title">MY ACHIEVEMENTS</h1>
               <p className="tag">Milestones, memories and things I’ve built along the way.</p>
-              {!introDone && <div className="load" role="status"><span className="bar"><i style={{ width: Math.round(progress * 100) + '%' }} /></span>Lighting the rooms · {Math.round(progress * 100)}%</div>}
-              {introDone && !entering && <button className="enter" type="button" onClick={enterMuseum}>Enter the exhibition <svg width="22" height="10" viewBox="0 0 22 10" fill="none" aria-hidden="true"><path d="M0 5h20M16 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" /></svg></button>}
-              <button className="alt" type="button" onClick={() => setMode2d(true)}>View as a 2D exhibition</button>
+              {!introDone && <div className="load" role="status"><span className="bar"><i style={{ width: Math.round(progress * 100) + '%' }} /></span>Preparing the exhibits · {Math.round(progress * 100)}%</div>}
+              {introDone && !entering && <button className="enter" type="button" onClick={enterMuseum}>Explore my achievements <svg width="22" height="10" viewBox="0 0 22 10" fill="none" aria-hidden="true"><path d="M0 5h20M16 1l4 4-4 4" stroke="currentColor" strokeWidth="1.2" /></svg></button>}
+              <button className="alt" type="button" onClick={() => setMode2d(true)}>View as a 2D gallery</button>
             </div>
           )}
           {entered && (
@@ -221,8 +233,8 @@ export default function Achievements() {
         <section className="flat" aria-labelledby="flat-h">
           <div className="wrap">
             <div className="flat-head">
-              <div><p className="kicker" style={{ animation: 'none' }}>03 · Achievements</p><h1 id="flat-h" style={{ marginTop: 18 }}>THE MUSEUM</h1><p>Milestones, memories and things I’ve built along the way.</p>{softGL && <p className="sw-note">Your browser is drawing graphics in software, so the lighter 2D gallery is shown. Turn on hardware acceleration in your browser settings for the full 3D museum, or press the button to try it anyway.</p>}</div>
-              {webgl && <button className="hbtn" type="button" onClick={() => { forced3d.current = true; setFocusId(null); setMode2d(false); }}>Enter the 3D museum</button>}
+              <div><p className="kicker" style={{ animation: 'none' }}>03 · Achievements</p><h1 id="flat-h" style={{ marginTop: 18 }}>MY ACHIEVEMENTS</h1><p>Milestones, memories and things I’ve built along the way.</p>{softGL && <p className="sw-note">Your browser is drawing graphics in software, so the lighter 2D gallery is shown. Turn on hardware acceleration in your browser settings for the full 3D museum, or press the button to try it anyway.</p>}</div>
+              {webgl && <button className="hbtn" type="button" onClick={() => { forced3d.current = true; setFocusId(null); setMode2d(false); }}>Enter the 3D view</button>}
             </div>
             {([[1, 'Hall I — Entrance gallery'], [2, 'Hall II — Inner gallery']] as const).map(([room, label]) => (
               <div key={room}>
@@ -233,7 +245,7 @@ export default function Achievements() {
                       <span className="piece-frame" data-m="block"><img src={e.cert} alt={`Certificate for ${e.title}`} loading="lazy" /></span>
                       <small>{catName(e.category)}</small>
                       <b>{e.title}</b>
-                      <small style={{ color: '#A39D92', letterSpacing: '.08em', textTransform: 'none', fontSize: 13 }}>{e.org} · {e.date}</small>
+                      <small style={{ color: '#A39D92', letterSpacing: '.08em', textTransform: 'none', fontSize: 13 }}>{[e.org, e.date].filter(Boolean).join(' · ')}</small>
                     </button>
                   ))}
                 </div>

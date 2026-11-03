@@ -1,0 +1,77 @@
+/* Hero scenes — Contact ("the window table") and My Work ("the bench"). Vector art + CSS motion. */
+.scene-svg{position:absolute;inset:0;width:100%;height:100%;display:block}
+.scene-slice{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.scene-box{position:absolute}
+.hero[data-lite] .scene-slice,.hero[data-lite] .scene-rain{display:none}
+.scene-rain{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
+
+/* ---------- Contact: window table ---------- */
+.bk{animation:sc-bokeh 5s ease-in-out infinite}
+@keyframes sc-bokeh{0%,100%{opacity:calc(var(--o) * .35);transform:scale(.94)}50%{opacity:var(--o);transform:scale(1.06)}}
+.neon{animation:sc-neon 7s linear infinite}
+.neon-halo{animation:sc-neonHalo 7s linear infinite}
+@keyframes sc-neon{0%,18%,22%,60%,64%,100%{opacity:1}19%,21%{opacity:.35}62%{opacity:.6}}
+@keyframes sc-neonHalo{0%,18%,22%,60%,64%,100%{opacity:.9}19%,21%{opacity:.3}62%{opacity:.55}}
+.phone-glow{animation:sc-pulse 3.6s ease-in-out infinite}
+@keyframes sc-pulse{0%,100%{opacity:.55;transform:scale(.96)}50%{opacity:1;transform:scale(1.05)}}
+.msg{animation:sc-msg 3.6s ease-in-out infinite}
+@keyframes sc-msg{0%,100%{opacity:.85}50%{opacity:1}}
+.puff{transform-origin:50% 100%;animation:sc-steam 5.5s ease-in-out infinite;opacity:0}
+.puff.p1{animation-delay:1.1s}.puff.p2{animation-delay:2.2s}.puff.p3{animation-delay:3.3s}.puff.p4{animation-delay:4.4s}
+@keyframes sc-steam{0%{opacity:0;transform:translate(0,14px) scale(.6,.6)}25%{opacity:.8}100%{opacity:0;transform:translate(8px,-120px) scale(1.5,1.7)}}
+.flame{transform-origin:50% 100%;animation:sc-flame 1.7s ease-in-out infinite}
+@keyframes sc-flame{0%,100%{transform:scale(1,1) skewX(0)}20%{transform:scale(.94,1.06) skewX(2deg)}45%{transform:scale(1.04,.95) skewX(-2deg)}70%{transform:scale(.97,1.05) skewX(1deg)}}
+.flame-glow{animation:sc-glow 1.9s ease-in-out infinite}
+@keyframes sc-glow{0%,100%{opacity:.8;transform:scale(1)}40%{opacity:.6;transform:scale(.95)}70%{opacity:.95;transform:scale(1.04)}}
+
+.pg-contact .h-bg > .scene-svg,.pg-contact .h-bg > .scene-slice{animation:contact-lightsOn 3.2s .2s cubic-bezier(.4,0,.2,1) both}
+.pg-contact .h-fg > .scene-svg,.pg-contact .h-fg > .scene-slice{animation:contact-fgIn 2.4s .9s var(--ease) both}
+
+/* ---------- My Work: the bench ---------- */
+.pg-work .intro{isolation:isolate;overflow:hidden}
+.work-scene{position:absolute;left:0;right:0;bottom:0;height:clamp(320px,44vw,660px);z-index:-1;pointer-events:none;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0,#000 30%);mask-image:linear-gradient(180deg,transparent 0,#000 30%);
+  animation:sc-benchIn 2.2s .5s var(--ease) both}
+.work-scene::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(11,11,10,.9) 0,rgba(11,11,10,.55) 38%,rgba(11,11,10,.1) 66%,transparent 80%);pointer-events:none}
+@keyframes sc-benchIn{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:none}}
+.work-glow{position:absolute;inset:0;z-index:-2;pointer-events:none;background:radial-gradient(60% 55% at 78% 82%,rgba(90,190,255,.1),transparent 70%),radial-gradient(30% 30% at 66% 92%,rgba(255,150,60,.08),transparent 70%)}
+.screen-clip{overflow:hidden;border-radius:4px}
+.led{animation:sc-led 2.4s steps(1) infinite}
+.led.l2{animation-duration:3.1s;animation-delay:-.6s}.led.l3{animation-duration:1.7s;animation-delay:-1s}.led.l4{animation-duration:4.2s;animation-delay:-2s}.led.l5{animation-duration:2.9s;animation-delay:-1.4s}
+@keyframes sc-led{0%,45%{opacity:1}50%,70%{opacity:.15}75%,100%{opacity:1}}
+.code-scroll{animation:sc-code 16s linear infinite}
+@keyframes sc-code{from{transform:translateY(0)}to{transform:translateY(-48.92%)}}
+.caret{position:absolute;left:6%;top:80%;width:2.6%;height:7%;background:#6fd3ff;animation:sc-caret 1s steps(1) infinite}
+@keyframes sc-caret{50%{opacity:0}}
+.holo{animation:sc-holo 6s ease-in-out infinite}
+@keyframes sc-holo{0%,100%{transform:translateY(8px) scaleX(1)}25%{transform:translateY(-2px) scaleX(.55)}50%{transform:translateY(-10px) scaleX(1)}75%{transform:translateY(-2px) scaleX(-.55)}}
+.holo-pool{animation:sc-pulse 3s ease-in-out infinite}
+.tip-glow{animation:sc-glow 2.2s ease-in-out infinite}
+.smoke{transform-origin:50% 100%;animation:sc-smoke 6s ease-in-out infinite;opacity:0}
+.smoke.m1{animation-delay:1.5s}.smoke.m2{animation-delay:3s}.smoke.m3{animation-delay:4.5s}
+@keyframes sc-smoke{0%{opacity:0;transform:translate(0,16px) scale(.6,.6)}25%{opacity:.7}100%{opacity:0;transform:translate(12px,-100px) scale(1.5,1.7)}}
+.ember{opacity:0;animation:sc-ember 3.4s ease-out infinite}
+.ember.e1{animation-delay:.7s}.ember.e2{animation-delay:1.5s}.ember.e3{animation-delay:2.2s}.ember.e4{animation-delay:2.8s}
+@keyframes sc-ember{0%{opacity:0;transform:translate(0,0)}12%{opacity:1}100%{opacity:0;transform:translate(14px,-90px)}}
+
+@media (max-width:700px){
+  .work-scene::after{background:linear-gradient(90deg,rgba(11,11,10,.6) 0,rgba(11,11,10,.1) 60%,transparent)}
+}
+@media (prefers-reduced-motion:reduce){
+  .bk,.neon,.neon-halo,.phone-glow,.msg,.puff,.flame,.flame-glow,.led,.code-scroll,.caret,.holo,.holo-pool,.tip-glow,.smoke,.ember{animation:none}
+  .puff{opacity:.25}.smoke{opacity:.35}.bk{opacity:.7}
+}
+.pg-work .intro{height:max(100svh,800px);padding-bottom:0}
+.pg-work .intro-side{position:relative}
+.pg-work .intro-side::before{content:"";position:absolute;inset:-28px -34px;z-index:-1;background:radial-gradient(closest-side,rgba(11,11,10,.78),transparent);pointer-events:none}
+@media (max-width:900px){.pg-work .intro{height:auto;min-height:0;padding-bottom:320px}}
+@media (max-width:700px){.pg-work .intro{padding-bottom:300px}.pg-work .intro .count,.pg-work .intro .cue{display:none}.work-scene{height:340px}}
+@media (max-width:700px){
+  .pg-contact .hero .h-shade{background:linear-gradient(180deg,rgba(11,11,10,.5) 0%,transparent 16%,transparent 78%,rgba(11,11,10,.85) 96%,#0B0B0A 100%)}
+  .pg-contact .hero .h-cue{bottom:10px}
+  .pg-contact .hero .h-cue .rail{height:30px}
+}
+@media (min-width:901px){
+  .pg-contact .hero .h-sub{max-width:300px}
+  .pg-contact .hero .h-cue{left:auto;right:clamp(28px,5vw,72px);transform:none}
+}

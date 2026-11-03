@@ -197,8 +197,9 @@ textarea.in.bad{border-color:var(--err)}
 }
 @media (max-width:560px){
   .hero{height:720px}
-  .h-type{left:18px;font-size:21vw}
-  .h-sub{left:18px;right:18px;max-width:none;font-size:18px;bottom:84px}
+  .h-type{left:18px;font-size:19vw}
+  .h-type span:nth-child(2){padding-left:.12em}
+  .h-sub{left:18px;right:18px;max-width:none;font-size:18px;bottom:auto;top:44%;text-shadow:0 2px 14px rgba(5,8,18,.9)}
   .intro{padding-block:110px 56px}
   .intro h2{font-size:clamp(40px,11vw,52px)}
   .intro p{font-size:15.5px}

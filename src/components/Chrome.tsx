@@ -137,7 +137,6 @@ export function Footer() {
         <div className="foot-bar">
           <span>© {new Date().getFullYear()} Dheeraj Panthangi</span>
           <MotionSwitch />
-          <Link className="admin" to="/admin">Administrator access</Link>
         </div>
       </div>
     </footer>

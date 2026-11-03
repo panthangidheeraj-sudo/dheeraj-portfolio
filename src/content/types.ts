@@ -25,12 +25,16 @@ export interface Project {
   order: number;
 }
 
-export type StandType = 'vitrine' | 'monument' | 'wall' | 'case' | 'floating';
+export type StandType = 'showcase' | 'vitrine' | 'monument' | 'wall' | 'case' | 'floating';
 export type AchievementCategory = 'academic' | 'hackathons' | 'certifications' | 'engineering' | 'recognition' | 'milestones';
 
 export interface Achievement {
   id: string;
   title: string;
+  /** Large sign hung above the stand in the 3D exhibition, e.g. "HARVARD CS50x". Falls back to the title. */
+  headline?: string;
+  /** Small line above the headline, e.g. "Certificate · 2025". */
+  kicker?: string;
   org: string;
   date: string;
   category: AchievementCategory;
