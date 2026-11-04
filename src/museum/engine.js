@@ -380,7 +380,7 @@ export function mount(container, canvas, opts = {}) {
       spotLocal = new THREE.Vector3(0, 6.6, 1.5); angle = 0.26 * s; inten = 80;
       hitBox = [W + 0.12, 2.1, D + 0.12, 1.05];
     } else if (ex.type === 'wall') {
-      const cw = 1.4 * s, ch = cw / 1.415;
+      const cw = 1.4 * s, ch = cw / (ex.aspect || 1.415);
       const back = box(cw + 0.36, ch + 0.36, 0.03, M.velvet); back.position.set(0, 1.75, 0.015); g.add(back);
       const fw = 0.035, fd = 0.05;
       [[0, ch / 2 + fw / 2, cw + fw * 2, fw], [0, -ch / 2 - fw / 2, cw + fw * 2, fw], [-cw / 2 - fw / 2, 0, fw, ch], [cw / 2 + fw / 2, 0, fw, ch]].forEach(([x, y, w, h]) => { const f = box(w, h, fd, M.brass); f.position.set(x, 1.75 + y, 0.05); g.add(f); });

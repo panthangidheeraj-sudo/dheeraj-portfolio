@@ -9,7 +9,7 @@ import { entranceWait, gsap, ScrollTrigger, isPhone, prefersReducedMotion, scram
 import { CursiveWord, finishWrite, primeWrite, writeOn } from '../components/Cursive';
 import { expandFrom, whenIntroDone } from '../lib/transition';
 
-const SKILLS = ['Python', 'TypeScript', 'React', 'Supabase', 'Web Design', 'Trading Systems', 'IPO Research', 'AI', 'Content & Design'];
+const SKILLS = ['Python', 'Java', 'C', 'TypeScript', 'React', 'Supabase', 'Firebase', 'Web Design', 'Trading Systems', 'IPO Research', 'AI', 'Marketing', 'Content Development'];
 
 const DOORS = [
   { to: '/work', n: 'I', name: 'My Work', desc: 'Projects & builds', frame: '', leaves: 'single-split' },
@@ -200,15 +200,15 @@ export default function Home() {
               <dl className="facts" data-m="slide">
                 <div className="fact"><dt>Studying</dt><dd>B.Tech, CSE Core<small>GITAM · 2nd year</small></dd></div>
                 <div className="fact"><dt>Building</dt><dd>Websites, trading systems &amp; AI<small>Freelance and personal projects</small></dd></div>
-                <div className="fact"><dt>Hackathons</dt><dd>Final round, Tech Zephyr 4.0<small>IIT Bhubaneswar</small></dd></div>
+                <div className="fact"><dt>Hackathons</dt><dd>Tech Zephyr 4.0 &amp; Google WowFest<small>IIT Bhubaneswar · and many more, counting</small></dd></div>
                 <div className="fact"><dt>Beyond code</dt><dd>Content, marketing &amp; design<small>Research and creative work</small></dd></div>
               </dl>
-              <p className="quote" data-m="rise">[Your personal statement — one sentence, in your own words.]</p>
+              <p className="quote" data-m="rise">Do what you like and always do it right.</p>
             </div>
             <figure className="about-figure">
               <span className="corner tl" aria-hidden="true" /><span className="corner tr" aria-hidden="true" /><span className="corner bl" aria-hidden="true" /><span className="corner br" aria-hidden="true" />
               <div className="frame" data-m="diag"><div className="portrait"><img src="/media/home/portrait.jpg" alt="Portrait of Dheeraj Panthangi outdoors, with the sea behind him" loading="lazy" data-speed="0.25" /></div></div>
-              <figcaption className="figcap" data-m="scramble"><span>Fig. 01 — Portrait</span><span>[Place, Year]</span></figcaption>
+              <figcaption className="figcap" data-m="scramble"><span>Fig. 01 — Portrait</span><span>Rushikondha, 2025</span></figcaption>
             </figure>
           </div>
         </div>
@@ -223,10 +223,11 @@ export default function Home() {
         </div>
         <div className="wrap">
           <div className="skill-index">
-            <div><h3 data-m="scramble">Languages</h3><p data-m="rise">Python<br />TypeScript<br /><span className="ph">[Add language]</span></p></div>
-            <div><h3 data-m="scramble" data-delay="0.1">Frameworks</h3><p data-m="rise" data-delay="0.1">React<br />Supabase<br /><span className="ph">[Add framework]</span></p></div>
-            <div><h3 data-m="scramble" data-delay="0.2">Tools</h3><p data-m="rise" data-delay="0.2">Figma<br />Obsidian<br />Google AI Studio · Claude</p></div>
-            <div><h3 data-m="scramble" data-delay="0.3">Practice</h3><p data-m="rise" data-delay="0.3">Web design &amp; development<br />Systematic trading<br />IPO research · AI work</p></div>
+            <div><h3 data-m="scramble">Human languages</h3><p data-m="rise">Telugu<br />English<br />Hindi</p></div>
+            <div><h3 data-m="scramble" data-delay="0.08">Computer languages</h3><p data-m="rise" data-delay="0.08">C<br />Python<br />Java<br />TypeScript<br />JSON</p></div>
+            <div><h3 data-m="scramble" data-delay="0.16">Frameworks</h3><p data-m="rise" data-delay="0.16">Render<br />Supabase<br />Firebase<br />Netlify</p></div>
+            <div><h3 data-m="scramble" data-delay="0.24">Tools</h3><p data-m="rise" data-delay="0.24">Figma<br />Obsidian<br />Google AI Studio<br />Google Antigravity<br />Claude Pro</p></div>
+            <div><h3 data-m="scramble" data-delay="0.32">Practice</h3><p data-m="rise" data-delay="0.32">Web design &amp; development<br />Systematic trading<br />IPO research · AI work<br />Marketing<br />Content development</p></div>
           </div>
         </div>
       </section>

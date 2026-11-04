@@ -170,3 +170,6 @@ The site follows the visitor's operating-system "reduce motion" setting. On Wind
 To override it without touching Windows: use the **Animations** switch in the footer, or open any page with
 `?motion=full` (or `?motion=reduced`, `?motion=auto` to go back to the system setting). The choice is remembered per browser.
 All of this lives in `src/lib/motionPref.ts`.
+
+### Ongoing achievements
+Items with `category: 'ongoing'` are courses and challenges still in progress (their images are posters, not certificates). Wall pieces accept an optional `aspect` (width ÷ height) so 16:9 posters are not squashed.

@@ -26,7 +26,7 @@ export interface Project {
 }
 
 export type StandType = 'showcase' | 'vitrine' | 'monument' | 'wall' | 'case' | 'floating';
-export type AchievementCategory = 'academic' | 'hackathons' | 'certifications' | 'engineering' | 'recognition' | 'milestones';
+export type AchievementCategory = 'academic' | 'hackathons' | 'certifications' | 'engineering' | 'recognition' | 'milestones' | 'ongoing';
 
 export interface Achievement {
   id: string;
@@ -44,6 +44,8 @@ export interface Achievement {
   verify: string;
   photos: string[];
   type: StandType;
+  /** Width ÷ height of the framed piece on a wall exhibit (default 1.415, an A4 certificate). Posters are 16:9 ≈ 1.78. */
+  aspect?: number;
   object?: 'chip' | 'auger' | 'vessel' | 'prism';
   room: 1 | 2;
   x: number;

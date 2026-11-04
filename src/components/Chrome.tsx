@@ -50,18 +50,32 @@ export function Nav() {
     if (!nav || pathname.startsWith('/achievements')) return;
     let last = window.scrollY;
     let ticking = false;
+    let armTimer = 0;
+    const setFloat = (on: boolean) => {
+      if (on === nav.classList.contains('is-float')) return;
+      window.cancelAnimationFrame(armTimer);
+      if (on) {
+        // Enter already tucked away (no transition), then allow the slide on the next frames — otherwise the bar
+        // pops in at the top of the screen and visibly slides out for a moment.
+        nav.classList.remove('is-anim', 'is-shown');
+        nav.classList.add('is-float');
+        armTimer = requestAnimationFrame(() => { armTimer = requestAnimationFrame(() => nav.classList.add('is-anim')); });
+      } else nav.classList.remove('is-float', 'is-shown', 'is-anim');
+    };
     const update = () => {
       ticking = false;
       const y = window.scrollY;
-      const past = y > window.innerHeight * 0.7;
-      nav.classList.toggle('is-float', past);
-      if (past) nav.classList.toggle('is-shown', y < last - 2 ? true : y > last + 2 ? false : nav.classList.contains('is-shown'));
-      else nav.classList.remove('is-shown');
+      const floating = nav.classList.contains('is-float');
+      // Starts floating once the first screen is behind us; once floating it stays until we are back at the very top,
+      // so scrolling up never makes the bar vanish and reappear.
+      const on = y > window.innerHeight * 0.7 || (floating && y > 8);
+      setFloat(on);
+      if (on) nav.classList.toggle('is-shown', y < last - 2 ? true : y > last + 2 ? false : nav.classList.contains('is-shown'));
       last = y;
     };
     const onScroll = () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } };
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => { window.removeEventListener('scroll', onScroll); nav.classList.remove('is-float', 'is-shown'); };
+    return () => { window.removeEventListener('scroll', onScroll); window.cancelAnimationFrame(armTimer); nav.classList.remove('is-float', 'is-shown', 'is-anim'); };
   }, [pathname]);
 
   // Mobile menu: panel wipes down, links rise with their numbers.
