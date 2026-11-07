@@ -37,16 +37,19 @@ export function mount(container, canvas, opts = {}) {
   const keep = (x) => (disposables.push(x), x);
 
   // ---------- loading ----------
-  const manager = new THREE.LoadingManager();
+  // The exhibition is prepared in stages while the loading screen shows (build → images → shaders → GPU uploads → first frame),
+  // each one time-sliced so the page never freezes; `ready` only fires when the first frame can be drawn without a hitch.
   let readyFired = false;
-  manager.onProgress = (_, a, b) => cb.onProgress(b ? a / b : 1);
-  manager.onLoad = () => { if (!readyFired) { readyFired = true; cb.onProgress(1); cb.onReady(); } };
-  manager.onError = () => {};
-  const readyTimer = setTimeout(() => { if (!readyFired) { readyFired = true; cb.onProgress(1); cb.onReady(); } }, 8000);
-  const loader = new THREE.TextureLoader(manager);
+  let prepared = false;
+  let imgTotal = 0, imgDone = 0, imgWait = null;
+  let lastProg = 0;
+  const report = (v) => { v = Math.min(1, Math.max(lastProg, v)); if (v - lastProg >= 0.004 || v === 1) { lastProg = v; cb.onProgress(v); } };
+  const imgSettled = () => { imgDone++; if (imgWait && imgDone >= imgTotal) imgWait(); };
+  const loader = new THREE.TextureLoader();
   const maxAniso = renderer.capabilities.getMaxAnisotropy();
   const tex = (url, onLoad) => {
-    const t = loader.load(url, onLoad);
+    imgTotal++;
+    const t = loader.load(url, (tt) => { imgSettled(); if (onLoad) onLoad(tt); }, undefined, imgSettled);
     t.colorSpace = THREE.SRGBColorSpace;
     t.anisotropy = Math.min(16, maxAniso);
     return keep(t);
@@ -322,7 +325,7 @@ export function mount(container, canvas, opts = {}) {
   const floaters = [];
   const certMaterial = (url) => keep(new THREE.MeshStandardMaterial({ map: tex(url), roughness: 0.82, metalness: 0 }));
 
-  (opts.exhibits || []).forEach((ex) => {
+  const buildExhibit = (ex) => {
     const s = clamp(ex.size || 1, 0.7, 1.4);
     const g = new THREE.Group();
     g.position.set(ex.x, 0, ex.z);
@@ -449,7 +452,7 @@ export function mount(container, canvas, opts = {}) {
     const zone = ex.z > Z_PART ? 'hall1' : 'hall2';
     const spot = addSpot(spotPos, focus, { intensity: inten * 1.25 * clamp(ex.light || 1, 0.5, 1.5), angle, group: zone, id: ex.id });
     exhibits.set(ex.id, { data: ex, group: g, focus, view, viewLocal, dyn, spot, signMat, edgeMats: glassEdges, glass: glassParts, z: ex.z });
-  });
+  };
 
   // ---------- closing wall ----------
   const closingTex = canvasTex(2048, 900, (g, w, h) => {
@@ -615,7 +618,7 @@ export function mount(container, canvas, opts = {}) {
   let tier = low ? 2 : 0; // 0 full · 1 cheap glass + DPR 1 · 2 lowest (DPR 0.75)
   container.dataset.quality = String(tier);
   const perf = { n: 0, start: 0, last: 0, max: 0 };
-  const mountedAt = performance.now();
+  let mountedAt = performance.now();
   const downgrade = () => {
     tier += 1;
     if (tier === 1) {
@@ -668,7 +671,7 @@ export function mount(container, canvas, opts = {}) {
     if (!alive || !visible || document.hidden) { clock.getDelta(); return; }
     const dt = Math.min(clock.getDelta(), 0.05);
     const t = clock.elapsedTime;
-    if (!reduced) watchPerf(performance.now());
+    if (!reduced && prepared) watchPerf(performance.now());
 
     // intro: lights come up in sequence after load
     if (phase === 'dark' && readyFired) { introT += dt; if (introT > (reduced ? 0 : 0.6)) { phase = 'lit'; setTargets(); } }
@@ -744,15 +747,67 @@ export function mount(container, canvas, opts = {}) {
     if (inset.cur > 0.5) camera.setViewOffset(container.clientWidth, container.clientHeight, 0, inset.cur / 2, container.clientWidth, container.clientHeight);
     else if (camera.view) { camera.clearViewOffset(); inset.cur = 0; }
     applyCamera();
-    renderer.render(scene, camera);
+    if (prepared) renderer.render(scene, camera);
   };
-  frame();
+  frame(); // the loop runs from the start, but nothing is drawn until the exhibition is prepared (below)
 
-  // fonts must be ready before plaques/closing wall are painted; repaint once they arrive
-  if (document.fonts && document.fonts.load) {
-    Promise.all(['400 46px "Cormorant Garamond"', '300 118px "Cormorant Garamond"', '500 20px "Instrument Sans"', '600 120px "Instrument Sans"', '500 27px "Instrument Sans"', '400 150px "Mrs Saint Delafield"'].map((f) => document.fonts.load(f).catch(() => {})))
-      .then(() => { if (!alive) return; disposables.forEach((d) => { if (d && d.isCanvasTexture && d.userData.redraw) d.userData.redraw(); }); });
-  }
+  // ---------- staged preparation: runs behind the loading screen, never blocking a frame for long ----------
+  // fonts first so the lettering is painted once; a late arrival repaints (rare)
+  const nextFrame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const FONTS = ['400 46px "Cormorant Garamond"', '300 118px "Cormorant Garamond"', '500 20px "Instrument Sans"', '600 120px "Instrument Sans"', '500 27px "Instrument Sans"', '400 150px "Mrs Saint Delafield"'];
+  const fontsP = document.fonts && document.fonts.load ? Promise.all(FONTS.map((f) => document.fonts.load(f).catch(() => {}))) : Promise.resolve();
+  let paintedWithFonts = false;
+  fontsP.then(() => { if (alive && paintedWithFonts) disposables.forEach((d) => { if (d && d.isCanvasTexture && d.userData.redraw) d.userData.redraw(); }); });
+  const prepare = async () => {
+    await nextFrame(); if (!alive) return;
+    await Promise.race([fontsP, sleep(2500)]); if (!alive) return;
+    closingTex.userData.redraw(); // drawn at mount, before the fonts were in
+    paintedWithFonts = true;
+    report(0.03);
+    // 1 · build the exhibits a few at a time
+    const queue = (opts.exhibits || []).slice();
+    const total = queue.length || 1;
+    let built = 0;
+    while (queue.length) {
+      const t0 = performance.now();
+      do { buildExhibit(queue.shift()); built++; } while (queue.length && performance.now() - t0 < 8);
+      report(0.03 + 0.32 * built / total);
+      await nextFrame(); if (!alive) return;
+    }
+    // 2 · wait for the certificate images (give up on stragglers after 12 s)
+    if (imgDone < imgTotal) {
+      const poll = setInterval(() => report(0.35 + 0.25 * (imgDone / Math.max(1, imgTotal))), 80);
+      await Promise.race([new Promise((r) => { imgWait = r; }), sleep(12000)]);
+      clearInterval(poll); if (!alive) return;
+    }
+    report(0.6);
+    // 3 · compile every shader without blocking (parallel compile where the browser supports it)
+    await nextFrame();
+    try { await renderer.compileAsync(scene, camera); } catch (e) { /* the first render will compile instead */ }
+    if (!alive) return;
+    report(0.72);
+    // 4 · push the textures to the GPU one or two per frame, so no single frame carries all of them
+    const texs = [];
+    scene.traverse((o) => {
+      const ms = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      ms.forEach((m) => ['map', 'emissiveMap', 'alphaMap'].forEach((k) => { const t = m[k]; if (t && t.isTexture && !texs.includes(t)) texs.push(t); }));
+    });
+    for (let i = 0; i < texs.length;) {
+      const t0 = performance.now();
+      do { const t = texs[i++]; try { if (t.image) renderer.initTexture(t); } catch (e) { /* uploaded on first use instead */ } } while (i < texs.length && performance.now() - t0 < 6);
+      report(0.72 + 0.22 * i / texs.length);
+      await nextFrame(); if (!alive) return;
+    }
+    // 5 · one frame in the dark uploads the geometry; then the lights may come up
+    report(0.96);
+    await nextFrame(); if (!alive) return;
+    applyCamera(); renderer.render(scene, camera);
+    await nextFrame(); if (!alive) return;
+    prepared = true; mountedAt = performance.now(); readyFired = true;
+    report(1); cb.onReady();
+  };
+  prepare().catch(() => { if (alive && !readyFired) { prepared = true; readyFired = true; report(1); cb.onReady(); } });
 
   // ---------- public API ----------
   const api = {
@@ -770,7 +825,6 @@ export function mount(container, canvas, opts = {}) {
     setMode(m) { mode = m === 'free' ? 'free' : 'cinematic'; if (mode === 'cinematic') { rig.offPitch = 0; } container.style.cursor = mode === 'free' ? 'grab' : 'default'; container.focus({ preventScroll: true }); },
     destroy() {
       alive = false;
-      clearTimeout(readyTimer);
       cancelAnimationFrame(raf);
       ro.disconnect(); io.disconnect();
       container.removeEventListener('pointermove', onMove);

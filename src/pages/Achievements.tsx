@@ -96,18 +96,25 @@ export default function Achievements() {
     const cv = document.createElement('canvas');
     cv.setAttribute('aria-hidden', 'true');
     el.prepend(cv);
-    engine.current = mount(el, cv, {
-      exhibits: list, quality: low ? 'low' : 'high', reducedMotion: prefersReducedMotion(),
-      callbacks: {
-        onProgress: (p: number) => { if (p - lastP >= 0.05 || p === 1) { lastP = p; setProgress(p); } },
-        onIntroDone: () => setIntroDone(true),
-        onEntered: () => { setEntered(true); setEntering(false); },
-        onHover: (id: string | null) => setHoverId(id),
-        onFocus: (id: string | null) => setFocusId(id)
-      }
-    }) as Engine;
-    if (!engine.current) { setWebgl(false); setMode2d(true); }
-    return () => { engine.current?.destroy(); engine.current = null; cv.remove(); setEntered(false); setEntering(false); setIntroDone(false); setProgress(0); setFocusId(null); };
+    // start after the loading screen has painted, so opening the page never stalls on engine set-up
+    let cancelled = false, r2 = 0;
+    const r1 = requestAnimationFrame(() => {
+      r2 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        engine.current = mount(el, cv, {
+          exhibits: list, quality: low ? 'low' : 'high', reducedMotion: prefersReducedMotion(),
+          callbacks: {
+            onProgress: (p: number) => { if (p - lastP >= 0.02 || p === 1) { lastP = p; setProgress(p); } },
+            onIntroDone: () => setIntroDone(true),
+            onEntered: () => { setEntered(true); setEntering(false); },
+            onHover: (id: string | null) => setHoverId(id),
+            onFocus: (id: string | null) => setFocusId(id)
+          }
+        }) as Engine;
+        if (!engine.current) { setWebgl(false); setMode2d(true); }
+      });
+    });
+    return () => { cancelled = true; cancelAnimationFrame(r1); cancelAnimationFrame(r2); engine.current?.destroy(); engine.current = null; cv.remove(); setEntered(false); setEntering(false); setIntroDone(false); setProgress(0); setFocusId(null); };
   }, [mode2d, list]);
 
   useEffect(() => {

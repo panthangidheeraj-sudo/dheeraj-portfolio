@@ -24,7 +24,14 @@ const SHOW_INTRO = typeof window !== 'undefined' && shouldShowIntro(window.locat
 if (!SHOW_INTRO) markIntroDone();
 
 // Three.js only downloads when someone opens the museum; the admin only when someone opens /admin.
-const Achievements = lazy(() => import('./pages/Achievements'));
+const loadAchievements = () => import('./pages/Achievements');
+const Achievements = lazy(loadAchievements);
+// fetch the 3D gallery's code while the browser is idle, so opening it later doesn't wait on the download (skipped on Data Saver)
+if (typeof window !== 'undefined' && !(navigator as { connection?: { saveData?: boolean } }).connection?.saveData) {
+  const warm = () => { loadAchievements().catch(() => {}); };
+  if ('requestIdleCallback' in window) (window as unknown as { requestIdleCallback: (f: () => void, o: { timeout: number }) => void }).requestIdleCallback(warm, { timeout: 8000 });
+  else setTimeout(warm, 5000);
+}
 const AdminLayout = lazy(() => import('./admin/AdminLayout'));
 
 const TITLES: [RegExp, string][] = [
